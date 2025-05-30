@@ -3,17 +3,21 @@ const { Pool } = require('pg');
 const cors = require('cors');
 
 const app = express();
+
+// CORS ayarları
 app.use(cors({
-  origin: 'http://localhost:3000',
-  methods: ['GET', 'POST']
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
+// PostgreSQL bağlantısı
 const pool = new Pool({
   connectionString: 'postgresql://deneme_user:GizliSifre123@193.111.125.236:5432/deneme'
 });
 
-// Veritabanı bağlantı kontrolü
+// Bağlantı kontrolü
 pool.on('connect', () => {
   console.log('Veritabanına bağlantı başarılı');
 });
@@ -35,8 +39,13 @@ const createTable = async () => {
   }
 };
 
-// API endpoints
-app.post('/api/users', async (req, res) => {
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
+
+// Kullanıcı ekleme endpoint'i
+app.post('/users', async (req, res) => {
   const { name, email } = req.body;
   try {
     const result = await pool.query(
@@ -51,7 +60,8 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-app.get('/api/users', async (req, res) => {
+// Kullanıcıları getirme endpoint'i
+app.get('/users', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users ORDER BY id DESC');
     res.json(result.rows);
@@ -62,13 +72,13 @@ app.get('/api/users', async (req, res) => {
 });
 
 // Server başlatma
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log(`Server ${PORT} portunda çalışıyor`);
   await createTable();
 });
 
-// Hata yakalama
+// Global hata yakalama
 process.on('unhandledRejection', (error) => {
   console.error('Beklenmeyen hata:', error);
 });
